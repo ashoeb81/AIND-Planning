@@ -532,20 +532,13 @@ class PlanningGraph():
         '''
         # For each goal literal, loop over all the levels in search of the first S node that
         # satisfies that literal.  Once found, add level to the running sum level_sum.
-        level_sum = 0
-        # Loop over goal literals.
-        for goal in self.problem.goal:
-            goal_found = False
-            # Loop over levels.
+        def level_cost(goal):
             for level, s_node_set in enumerate(self.s_levels):
-                if goal_found:
-                    break
-                # Loop over S nodes in each level.
-                for s_node in s_node_set:
-                    # If goal satisfied, then increment level_sum and move on to next goal literal.
-                    if s_node.literal ==  goal:
-                        if not goal_found:
-                            level_sum += level
-                            goal_found = True
-                            break
+                if PgNode_s(goal, True) in s_node_set:
+                    return level
+            return 0
+
+        level_sum = 0
+        for goal in self.problem.goal:
+            level_sum += level_cost(goal)
         return level_sum
