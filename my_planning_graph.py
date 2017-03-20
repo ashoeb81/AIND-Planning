@@ -530,14 +530,17 @@ class PlanningGraph():
 
         :return: int
         '''
-        # For each goal literal, loop over all the levels in search of the first S node that
-        # satisfies that literal.  Once found, add level to the running sum level_sum.
         def level_cost(goal):
-            for level, s_node_set in enumerate(self.s_levels):
+            # For each level, search whether goal is satisfied.
+            for level_number, s_node_set in enumerate(self.s_levels):
+                # Turn goal into an S level node to make comparison easy.
                 if PgNode_s(goal, True) in s_node_set:
-                    return level
+                    return level_number
             return 0
 
+        # For each goal literal, compute the level_cost, which is defined as the first level at 
+        # which the goal literal is satisfied.  The level_sum is then the sum of these individual 
+        # level costs.
         level_sum = 0
         for goal in self.problem.goal:
             level_sum += level_cost(goal)
