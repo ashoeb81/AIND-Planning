@@ -311,16 +311,18 @@ class PlanningGraph():
         # testing to see if a proposed PgNode_a has prenodes that are a subset of the previous S level.  Once an
         # action node is added, it MUST be connected to the S node instances in the appropriate s_level set.
         self.a_levels.append(set())
+        s_level_set = self.s_levels[level]
         for action in self.all_actions:
             action_node = PgNode_a(action)
-            # Check if previous S level satisfied actions preconditions.
-            # If so, connect the nodes.
-            intersection = self.s_levels[level].intersection(action_node.prenodes)
-            if intersection:
-                for s_node in intersection:
-                    s_node.children.add(action_node)
-                    action_node.parents.add(s_node)
+            # Check if action's preconditions are a subset of the current S level.
+            if action_node.prenodes.issubset(s_level_set):
                 self.a_levels[level].add(action_node)
+                # For each S node that is in the action's preconditions, connect the S and A nodes.
+                for s_node in s_level_set:
+                    if s_node in action_node.prenodes:
+                        s_node.children.add(action_node)
+                        action_node.parents.add(s_node)
+
 
     def add_literal_level(self, level):
         ''' add an S (literal) level to the Planning Graph
@@ -461,10 +463,7 @@ class PlanningGraph():
                         return True
             return False
 
-        if check_opposing_preconditions(node_a1, node_a2):
-            return True
-        else:
-            return False
+        return check_opposing_preconditions(node_a1, node_a2)
 
     def update_s_mutex(self, nodeset: set):
         ''' Determine and update sibling mutual exclusion for S-level nodes
@@ -525,23 +524,33 @@ class PlanningGraph():
                     return False
         return True
 
+
+    def level_cost(self, g):
+        for level_number, s_node_set in enumerate(self.s_levels):
+            level_literal_set = set(n.literal for n in s_node_set)
+            if g in level_literal_set:
+                return level_number
+        return 0
+
     def h_levelsum(self) -> int:
         '''The sum of the level costs of the individual goals (admissible if goals independent)
 
         :return: int
         '''
-        def level_cost(goal):
-            # For each level, search whether goal is satisfied.
-            for level_number, s_node_set in enumerate(self.s_levels):
-                # Turn goal into an S level node to make comparison easy.
-                if PgNode_s(goal, True) in s_node_set:
-                    return level_number
-            return 0
+        # def level_cost(goal):
+        #     # For each level, search whether goal is satisfied.
+        #     for level_number, s_node_set in enumerate(self.s_levels):
+        #         # Turn goal into an S level node to make comparison easy.
+        #         if PgNode_s(goal, True) in s_node_set:
+        #             return level_number
+        #     return 0
+
+
 
         # For each goal literal, compute the level_cost, which is defined as the first level at 
         # which the goal literal is satisfied.  The level_sum is then the sum of these individual 
         # level costs.
         level_sum = 0
         for goal in self.problem.goal:
-            level_sum += level_cost(goal)
+            level_sum += self.level_cost(goal)
         return level_sum
